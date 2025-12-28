@@ -2,14 +2,19 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+// HARDCODED OVERRIDE - DO NOT COMMIT TO PRODUCTION WITHOUT REVIEW
+const SUPABASE_URL = "https://erunrdebjlavuprcsuth.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVydW5yZGViamxhdnVwcmNzdXRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYzMjE1MzUsImV4cCI6MjA4MTg5NzUzNX0.I0Si-i_9qsR65_D5W1LYP9_EVrOP32FDUiCGB-hK0mU";
 
 // Debug logging to verify correct environment variables are loaded
 console.log('Supabase Config:', {
-  url: SUPABASE_URL,
+  expectedUrl: "Must contain 'erunrdebjlavuprcsuth'",
+  actualUrl: SUPABASE_URL,
   keyLength: SUPABASE_PUBLISHABLE_KEY?.length,
-  projectId: SUPABASE_URL?.split('.')[0]?.split('//')[1]
+  projectId: SUPABASE_URL?.split('.')[0]?.split('//')[1],
+  rawEnv: {
+    VITE_SUPABASE_URL: import.meta.env.VITE_SUPABASE_URL
+  }
 });
 
 // Import the supabase client like this:

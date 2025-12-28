@@ -50,6 +50,13 @@
     --ring: 250 95% 65%;
 
     --radius: 1rem;
+
+    /* Custom Nova Schola colors */
+    --nova-dark: 222 47% 8%;
+    --nova-dark-lighter: 222 40% 12%;
+    --nova-purple: 258 90% 66%;
+    --nova-purple-light: 258 90% 75%;
+    --nova-grid: 222 30% 20%;
     /* More rounded for playful feel */
 
     /* Vibrancy Gradients */
@@ -284,4 +291,12 @@
 
 .stagger-6 {
   animation-delay: 0.6s;
+}
+
+/* Grid background pattern */
+.nova-grid-bg {
+  background-image: 
+    linear-gradient(to right, hsl(var(--nova-grid) / 0.3) 1px, transparent 1px),
+    linear-gradient(to bottom, hsl(var(--nova-grid) / 0.3) 1px, transparent 1px);
+  background-size: 40px 40px;
 }
