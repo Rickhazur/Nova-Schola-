@@ -28,19 +28,40 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
 
   // Helper to fetch role and profile together, only set loading=false when done
-  const fetchUserData = async (userId: string, setLoadingFalse: boolean = false) => {
-    const [roleResult, profileResult] = await Promise.all([
-      supabase.from('user_roles').select('role').eq('user_id', userId).single(),
-      supabase.from('student_profiles').select('*').eq('user_id', userId).single()
-    ]);
-    
-    if (roleResult.data && !roleResult.error) {
-      setRole(roleResult.data.role as AppRole);
+  const fetchUserData = async (user: User, setLoadingFalse: boolean = false) => {
+    try {
+      const [roleResult, profileResult] = await Promise.all([
+        supabase.from('user_roles').select('role').eq('user_id', user.id).maybeSingle(),
+        supabase.from('student_profiles').select('*').eq('user_id', user.id).maybeSingle()
+      ]);
+
+      let finalRole: AppRole | null = null;
+
+      // 1. Try DB role
+      if (roleResult.data?.role) {
+        finalRole = roleResult.data.role as AppRole;
+      }
+      // 2. Fallback to metadata
+      else if (user.user_metadata?.role) {
+        console.log("No DB role found, using metadata fallback:", user.user_metadata.role);
+        finalRole = user.user_metadata.role as AppRole;
+      }
+      // 3. Last resort: Default to student if no role found 
+      // (Safety: ensures new users are never stuck without a role)
+      else if (!roleResult.error) { // Only default if query succeeded but was empty
+        console.warn("No role found anywhere, defaulting to 'student'");
+        finalRole = 'student';
+      }
+
+      setRole(finalRole);
+
+      if (profileResult.data) {
+        setProfile(profileResult.data as StudentProfile);
+      }
+    } catch (error) {
+      console.error("Error fetching user data:", error);
     }
-    if (profileResult.data && !profileResult.error) {
-      setProfile(profileResult.data as StudentProfile);
-    }
-    
+
     if (setLoadingFalse) {
       setLoading(false);
     }
@@ -53,10 +74,10 @@ export function useAuth() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, newSession) => {
         if (!isMounted) return;
-        
+
         setSession(newSession);
         setUser(newSession?.user ?? null);
-        
+
         // When user signs out, clear everything
         if (!newSession?.user) {
           setRole(null);
@@ -64,7 +85,7 @@ export function useAuth() {
           setLoading(false);
         } else if (event === 'SIGNED_IN') {
           // Only refetch on actual sign in events
-          fetchUserData(newSession.user.id, false);
+          fetchUserData(newSession.user, false);
         }
       }
     );
@@ -72,13 +93,13 @@ export function useAuth() {
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session: existingSession } }) => {
       if (!isMounted) return;
-      
+
       setSession(existingSession);
       setUser(existingSession?.user ?? null);
-      
+
       if (existingSession?.user) {
         // Fetch role and profile, THEN set loading to false
-        fetchUserData(existingSession.user.id, true);
+        fetchUserData(existingSession.user, true);
       } else {
         setLoading(false);
       }
@@ -96,22 +117,22 @@ export function useAuth() {
       .select('*')
       .eq('user_id', userId)
       .single();
-    
+
     if (data && !error) {
       setProfile(data as StudentProfile);
     }
   };
 
   const signUp = async (
-    email: string, 
-    password: string, 
+    email: string,
+    password: string,
     role: AppRole = 'student',
     fullName?: string,
     preferredLanguage: string = 'es',
     gradeLevel?: number
   ) => {
     const redirectUrl = `${window.location.origin}/`;
-    
+
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -143,16 +164,16 @@ export function useAuth() {
 
   const updateProfile = async (updates: Partial<StudentProfile>) => {
     if (!user) return { error: new Error('Not authenticated') };
-    
+
     const { error } = await supabase
       .from('student_profiles')
       .update(updates)
       .eq('user_id', user.id);
-    
+
     if (!error) {
       setProfile(prev => prev ? { ...prev, ...updates } : null);
     }
-    
+
     return { error };
   };
 

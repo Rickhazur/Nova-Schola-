@@ -19,19 +19,40 @@ const Auth = () => {
   // Check for existing session and redirect
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        navigate("/app/dashboard");
+      if (session?.user) {
+        checkUserRole(session.user.id);
       }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) {
-        navigate("/app/dashboard");
+      if (session?.user) {
+        checkUserRole(session.user.id);
       }
     });
 
     return () => subscription.unsubscribe();
   }, [navigate]);
+
+  const checkUserRole = async (userId: string) => {
+    // Check DB role
+    const { data: roleData } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (roleData?.role === 'admin') {
+      navigate("/app/panel-control");
+    } else {
+      // Also check metadata if DB redundant
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.user_metadata?.role === 'admin') {
+        navigate("/app/panel-control");
+      } else {
+        navigate("/app/dashboard");
+      }
+    }
+  };
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,7 +78,7 @@ const Auth = () => {
 
         if (data.user) {
           toast.success("¡Bienvenido de vuelta!");
-          navigate("/app/dashboard");
+          checkUserRole(data.user.id);
         }
       } else {
         const redirectUrl = `${window.location.origin}/`;
@@ -176,8 +197,8 @@ const Auth = () => {
               <button
                 onClick={() => setUserType("estudiante")}
                 className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-md text-sm font-medium transition-all ${userType === "estudiante"
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
                   }`}
               >
                 <GraduationCap className="w-4 h-4" />
@@ -186,8 +207,8 @@ const Auth = () => {
               <button
                 onClick={() => setUserType("administrativo")}
                 className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-md text-sm font-medium transition-all ${userType === "administrativo"
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
                   }`}
               >
                 <Shield className="w-4 h-4" />
